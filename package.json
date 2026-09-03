@@ -1,0 +1,27 @@
+{
+  "name": "mern-demo",
+  "version": "1.0.0",
+  "description": "MERN Stack Demo - Student Management",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "nodemon server/server.js",
+    "seed": "node server/data/seedStudents.js"
+  },
+  "keywords": [
+    "mern",
+    "express",
+    "mongodb"
+  ],
+  "author": "kenjin2005q",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "mongoose": "^7.5.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
