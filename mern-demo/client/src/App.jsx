@@ -190,7 +190,7 @@ function App() {
           paddingBottom: "10px",
         }}
       >
-        🎓 Student List ({students.length})
+        Danh Sach Sinh Vien ({students.length})
       </h1>
 
       {/* Form */}
