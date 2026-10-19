@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
 
 function App() {
+  // Thay thế URL tuyệt đối bằng đường dẫn tương đối để Nginx Reverse Proxy xử lý ngầm
+  const API_URL = "/api";
+
   const [students, setStudents] = useState([]);
+
   const [formData, setFormData] = useState({
     studentId: "",
     fullName: "",
@@ -13,58 +17,51 @@ function App() {
     gpa: "",
     year: "",
   });
+
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Lấy danh sách sinh viên
+  // =====================================================
+  // LẤY DANH SÁCH SINH VIÊN
+  // =====================================================
   useEffect(() => {
     fetchStudents();
   }, []);
 
   const fetchStudents = async () => {
     try {
-      const res = await fetch(
-        "https://glorious-computing-machine-x54pv69q4qx526776-5000.app.github.dev/api/students",
-      );
-      const data = await res.json();
-      console.log("Raw API Response:", data);
-      console.log("Type of data:", typeof data);
-      console.log("Is Array:", Array.isArray(data));
+      console.log("GET:", `${API_URL}/students`);
 
-      // XỬ LÝ NHIỀU TRƯỜNG HỢP DỮ LIỆU
+      const res = await fetch(`${API_URL}/students`);
+
+      if (!res.ok) {
+        throw new Error(`HTTP Error: ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      console.log("Raw API Response:", data);
+
       let studentList = [];
 
       if (Array.isArray(data)) {
-        // Trường hợp 1: data là array trực tiếp
         studentList = data;
       } else if (data && typeof data === "object") {
-        // Trường hợp 2: data là object
-
-        // Kiểm tra nếu có field 'data' là array
-        if (data.data && Array.isArray(data.data)) {
+        if (Array.isArray(data.data)) {
           studentList = data.data;
-        }
-        // Kiểm tra nếu có field 'students' là array
-        else if (data.students && Array.isArray(data.students)) {
+        } else if (Array.isArray(data.students)) {
           studentList = data.students;
-        }
-        // Trường hợp 3: object chứa các student object
-        else {
+        } else {
           const values = Object.values(data);
-          // Lọc các object có chứa studentId
           const filtered = values.filter(
             (item) => item && typeof item === "object" && item.studentId,
           );
           if (filtered.length > 0) {
             studentList = filtered;
-          } else {
-            studentList = [];
           }
         }
       }
 
-      console.log("Processed Students:", studentList);
-      console.log("Number of students:", studentList.length);
       setStudents(studentList);
     } catch (error) {
       console.error("Error fetching students:", error);
@@ -72,7 +69,9 @@ function App() {
     }
   };
 
-  // Xử lý thay đổi form
+  // =====================================================
+  // XỬ LÝ THAY ĐỔI FORM
+  // =====================================================
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -80,86 +79,111 @@ function App() {
     });
   };
 
-  // Thêm hoặc cập nhật sinh viên
+  // =====================================================
+  // RESET FORM
+  // =====================================================
+  const resetForm = () => {
+    setFormData({
+      studentId: "",
+      fullName: "",
+      email: "",
+      phone: "",
+      address: "",
+      gender: "Male",
+      major: "",
+      gpa: "",
+      year: "",
+    });
+
+    setEditingId(null);
+  };
+
+  // =====================================================
+  // THÊM / CẬP NHẬT SINH VIÊN
+  // =====================================================
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       const url = editingId
-        ? `https://glorious-computing-machine-x54pv69q4qx526776-5000.app.github.dev/api/students/${editingId}`
-        : "https://glorious-computing-machine-x54pv69q4qx526776-5000.app.github.dev/api/students";
+        ? `${API_URL}/students/${editingId}`
+        : `${API_URL}/students`;
 
       const method = editingId ? "PUT" : "POST";
 
-      console.log("Sending to:", url);
-      console.log("Method:", method);
-      console.log("Data:", formData);
-
       const res = await fetch(url, {
         method: method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(formData),
       });
 
       const data = await res.json();
-      console.log("Response:", data);
 
       if (res.ok) {
-        await fetchStudents(); // Reload danh sách
-        setFormData({
-          studentId: "",
-          fullName: "",
-          email: "",
-          phone: "",
-          address: "",
-          gender: "Male",
-          major: "",
-          gpa: "",
-          year: "",
-        });
-        setEditingId(null);
+        await fetchStudents();
+        resetForm();
         alert(
-          editingId ? "✅ Updated successfully!" : "✅ Added successfully!",
+          method === "POST"
+            ? "✅ Added successfully!"
+            : "✅ Updated successfully!",
         );
       } else {
-        alert("❌ Error: " + (data.message || "Unknown error"));
+        alert("❌ Error: " + (data.message || "Unknown server error"));
       }
     } catch (error) {
-      console.error("Error:", error);
-      alert("❌ Network Error! Please check backend server.");
+      console.error("Error submitting student:", error);
+      alert("❌ Network Error! Please check Nginx Proxy.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Xóa sinh viên
+  // =====================================================
+  // XÓA SINH VIÊN
+  // =====================================================
   const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this student?")) return;
+    if (!id) {
+      alert("❌ Student ID not found!");
+      return;
+    }
+
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this student?",
+    );
+    if (!confirmDelete) return;
 
     try {
-      const res = await fetch(
-        `https://glorious-computing-machine-x54pv69q4qx526776-5000.app.github.dev/api/students/${id}`,
-        {
-          method: "DELETE",
-        },
-      );
+      const url = `${API_URL}/students/${id}`;
+      const res = await fetch(url, { method: "DELETE" });
+      const data = await res.json();
 
       if (res.ok) {
         await fetchStudents();
         alert("✅ Deleted successfully!");
       } else {
-        alert("❌ Delete failed!");
+        alert("❌ Delete failed: " + (data.message || "Unknown error"));
       }
     } catch (error) {
-      console.error("Error deleting:", error);
-      alert("❌ Network Error!");
+      console.error("Error deleting student:", error);
+      alert("❌ Network Error! Please check Nginx Proxy.");
     }
   };
 
-  // Sửa sinh viên (điền dữ liệu vào form)
+  // =====================================================
+  // SỬA SINH VIÊN
+  // =====================================================
   const handleEdit = (student) => {
-    setEditingId(student._id || student.id);
+    const id = student._id || student.id;
+
+    if (!id) {
+      alert("❌ Student ID not found!");
+      return;
+    }
+
+    setEditingId(id);
     setFormData({
       studentId: student.studentId || "",
       fullName: student.fullName || student.name || "",
@@ -171,9 +195,13 @@ function App() {
       gpa: student.gpa || "",
       year: student.year || "",
     });
+
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // =====================================================
+  // GIAO DIỆN
+  // =====================================================
   return (
     <div
       style={{
@@ -183,17 +211,32 @@ function App() {
         margin: "0 auto",
       }}
     >
-      <h1
+      {/* TIÊU ĐỀ HỆ THỐNG PHIÊN BẢN 2.0 */}
+      <div
         style={{
-          color: "#333",
           borderBottom: "3px solid #007bff",
           paddingBottom: "10px",
+          marginBottom: "20px",
         }}
       >
-        Danh Sach Sinh Vien ({students.length})
-      </h1>
+        <h1 style={{ color: "#333", margin: 0 }}>
+          Danh Sách Sinh Viên ({students.length})
+        </h1>
+        <span
+          style={{
+            backgroundColor: "#28a745",
+            color: "white",
+            padding: "3px 8px",
+            borderRadius: "5px",
+            fontSize: "12px",
+            fontWeight: "bold",
+          }}
+        >
+          v2.0 - Unified Nginx Origin
+        </span>
+      </div>
 
-      {/* Form */}
+      {/* FORM NẬP DỮ LIỆU */}
       <form
         onSubmit={handleSubmit}
         style={{
@@ -220,24 +263,24 @@ function App() {
             placeholder="Student ID *"
             value={formData.studentId}
             onChange={handleChange}
+            required
             style={{
               padding: "10px",
               borderRadius: "5px",
               border: "1px solid #ddd",
             }}
-            required
           />
           <input
             name="fullName"
             placeholder="Full Name *"
             value={formData.fullName}
             onChange={handleChange}
+            required
             style={{
               padding: "10px",
               borderRadius: "5px",
               border: "1px solid #ddd",
             }}
-            required
           />
           <input
             name="email"
@@ -245,12 +288,12 @@ function App() {
             type="email"
             value={formData.email}
             onChange={handleChange}
+            required
             style={{
               padding: "10px",
               borderRadius: "5px",
               border: "1px solid #ddd",
             }}
-            required
           />
           <input
             name="phone"
@@ -274,6 +317,7 @@ function App() {
               border: "1px solid #ddd",
             }}
           />
+
           <select
             name="gender"
             value={formData.gender}
@@ -288,6 +332,7 @@ function App() {
             <option value="Female">Female</option>
             <option value="Other">Other</option>
           </select>
+
           <input
             name="major"
             placeholder="Major"
@@ -336,7 +381,7 @@ function App() {
               color: "white",
               border: "none",
               borderRadius: "5px",
-              cursor: "pointer",
+              cursor: loading ? "not-allowed" : "pointer",
               fontSize: "16px",
               fontWeight: "bold",
             }}
@@ -347,23 +392,11 @@ function App() {
                 ? "✏️ Update Student"
                 : "➕ Add Student"}
           </button>
+
           {editingId && (
             <button
               type="button"
-              onClick={() => {
-                setEditingId(null);
-                setFormData({
-                  studentId: "",
-                  fullName: "",
-                  email: "",
-                  phone: "",
-                  address: "",
-                  gender: "Male",
-                  major: "",
-                  gpa: "",
-                  year: "",
-                });
-              }}
+              onClick={resetForm}
               style={{
                 padding: "10px 30px",
                 backgroundColor: "#6c757d",
@@ -380,7 +413,7 @@ function App() {
         </div>
       </form>
 
-      {/* Danh sách sinh viên */}
+      {/* DANH SÁCH BẢNG */}
       {students.length === 0 ? (
         <p style={{ textAlign: "center", color: "#888", padding: "40px" }}>
           📭 No students found

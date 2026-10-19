@@ -1,8 +1,7 @@
 import axios from "axios";
 
 // Cấu hình API URL
-const API_URL =
-  "https://glorious-computing-machine-x54pv69q4qx526776-5000.app.github.dev/api";
+const API_URL = "https://mern-backend-1-0-eazo.onrender.com/api";
 
 // Tạo axios instance
 const api = axios.create({
